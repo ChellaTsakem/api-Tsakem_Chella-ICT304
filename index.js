@@ -1,11 +1,63 @@
 import express from "express";
+import swaggerUi from "swagger-ui-express"; // NOUVEAU : Import de Swagger
 
 const app = express();
-// MODIFICATION RENDER : On laisse Render choisir le port, sinon on utilise 3000
 const port = process.env.PORT || 3000;
 
-// Pour que l'API comprenne le JSON
 app.use(express.json());
+
+// --- CONFIGURATION SWAGGER (Le plan de ton API) ---
+const swaggerDocument = {
+  openapi: "3.0.0",
+  info: {
+    title: "API Bancaire - TSAKEM CHELLA",
+    version: "1.0.0",
+    description: "Documentation de l'API Bancaire pour le TP ICT304"
+  },
+  paths: {
+    "/api/comptes": {
+      get: {
+        summary: "Obtenir la liste de tous les comptes",
+        responses: { "200": { description: "Succès" } }
+      },
+      post: {
+        summary: "Créer un nouveau compte",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: { nom: { type: "string", example: "Chella" }, solde: { type: "number", example: 5000 } }
+              }
+            }
+          }
+        },
+        responses: { "201": { description: "Compte créé" } }
+      }
+    },
+    "/api/transaction": {
+      post: {
+        summary: "Effectuer un dépôt ou un retrait",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: { id: { type: "number", example: 1 }, montant: { type: "number", example: 1000 }, type: { type: "string", example: "retrait" } }
+              }
+            }
+          }
+        },
+        responses: { "200": { description: "Transaction réussie" }, "400": { description: "Solde insuffisant ou erreur" }, "404": { description: "Compte non trouvé" } }
+      }
+    }
+  }
+};
+
+// On dit à l'API d'afficher Swagger sur la route /api-docs
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // --- NOTRE BASE DE DONNÉES (En mémoire) ---
 let comptes = [
@@ -13,36 +65,21 @@ let comptes = [
     { id: 2, nom: "Bob", solde: 10000 }
 ];
 
-// --- NOUVELLE PAGE D'ACCUEIL POUR LE PROFESSEUR ---
+// --- PAGE D'ACCUEIL MISE À JOUR AVEC LE LIEN SWAGGER ---
 app.get('/', (req, res) => {
-    // J'ai mis un peu de style (HTML/CSS) pour que ça fasse très professionnel
     res.send(`
         <div style="font-family: Arial, sans-serif; padding: 20px; text-align: center; background-color: #f4f7f6; min-height: 100vh;">
             <div style="max-width: 600px; margin: 40px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                <h1 style="color: #2c3e50; margin-bottom: 5px;">Bienvenue sur l'API Bancaire ! 🚀</h1>
+                <h1 style="color: #2c3e50; margin-bottom: 5px;">Bienvenue sur l'API Bancaire !!</h1>
                 <h2 style="color: #2980b9; margin-top: 0;">Réalisé par : <strong>TSAKEM CHELLA</strong></h2>
                 <p style="font-size: 16px; color: #7f8c8d;">L'API est en ligne et fonctionne parfaitement.</p>
                 
                 <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
                 
-                <h3 style="color: #27ae60;">Test rapide (Navigateur) :</h3>
-                <a href="/api/comptes" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #27ae60; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin-bottom: 25px;">
-                    👉 Cliquez ici pour voir la liste des comptes
+                <h3 style="color: #27ae60;">Interface de Test Interactive (Swagger) :</h3>
+                <a href="/api-docs" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #8e44ad; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin-bottom: 25px;">
+                     TESTER L'API AVEC SWAGGER UI
                 </a>
-                
-                <h3 style="color: #2c3e50; text-align: left; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px;">Test Avancé (Postman / Thunder Client) :</h3>
-                <ul style="text-align: left; background: #ecf0f1; padding: 20px 30px; border-radius: 5px; list-style-type: none;">
-                    <li style="margin-bottom: 15px;">
-                        <b>Créer un compte :</b> <br>
-                        <code style="background: #fff; padding: 4px 8px; border-radius: 3px; color: #c0392b; display: inline-block; margin-top: 5px;">POST /api/comptes</code><br> 
-                        <i style="color: #555;">Body (JSON): { "nom": "Nouveau", "solde": 1000 }</i>
-                    </li>
-                    <li>
-                        <b>Transaction (Dépôt/Retrait) :</b> <br>
-                        <code style="background: #fff; padding: 4px 8px; border-radius: 3px; color: #c0392b; display: inline-block; margin-top: 5px;">POST /api/transaction</code><br> 
-                        <i style="color: #555;">Body (JSON): { "id": 1, "montant": 500, "type": "retrait" }</i>
-                    </li>
-                </ul>
             </div>
         </div>
     `);
@@ -85,7 +122,6 @@ app.post('/api/transaction', (req, res) => {
     }
 });
 
-// --- ALLUMER LE SERVEUR ---
 app.listen(port, () => {
     console.log(`Serveur démarré avec succès sur le port ${port}`);
 });
