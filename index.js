@@ -122,6 +122,54 @@ app.post('/api/transaction', (req, res) => {
     }
 });
 
+// --- ROUTE 4 : Supprimer un compte (NOUVELLE FONCTIONNALITÉ 5) ---
+app.delete('/api/comptes/:id', (req, res) => {
+    const idCompte = parseInt(req.params.id);
+    const index = comptes.findIndex(c => c.id === idCompte);
+
+    if (index === -1) {
+        return res.status(404).json({ erreur: "Compte non trouvé pour suppression" });
+    }
+
+    comptes.splice(index, 1); // Supprime le compte du tableau
+    res.status(200).json({ message: "Compte supprimé avec succès" });
+});
+
+// --- FONCTIONNALITÉ 5 : Virement de compte à compte ---
+app.post('/api/virement', (req, res) => {
+    const { fromId, toId, montant } = req.body;
+    
+    const expediteur = comptes.find(c => c.id === fromId);
+    const destinataire = comptes.find(c => c.id === toId);
+
+    // Vérifications de sécurité (Contrôle de flot)
+    if (!expediteur) return res.status(404).json({ erreur: "Compte expéditeur introuvable" });
+    if (!destinataire) return res.status(404).json({ erreur: "Compte destinataire introuvable" });
+    if (expediteur.solde < montant) return res.status(400).json({ erreur: "Solde insuffisant pour ce virement" });
+
+    // Exécution de la transaction
+    expediteur.solde -= montant;
+    destinataire.solde += montant;
+
+    res.status(200).json({ 
+        message: "Virement réussi", 
+        nouveauSoldeExpediteur: expediteur.solde,
+        destinataire: destinataire.nom
+    });
+});
+
+// --- FONCTIONNALITÉ 6 : Recherche de compte par nom ---
+app.get('/api/recherche', (req, res) => {
+    const nomRecherche = req.query.nom;
+    if (!nomRecherche) return res.status(400).json({ erreur: "Veuillez préciser un nom" });
+
+    const resultats = comptes.filter(c => 
+        c.nom.toLowerCase().includes(nomRecherche.toLowerCase())
+    );
+
+    res.status(200).json(resultats);
+});
+
 app.listen(port, () => {
     console.log(`Serveur démarré avec succès sur le port ${port}`);
 });
